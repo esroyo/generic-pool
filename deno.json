@@ -1,6 +1,6 @@
 {
     "name": "@esroyo/generic-pool",
-    "version": "3.10.0",
+    "version": "3.10.1",
     "exports": "./src/generic-pool.ts",
     "tasks": {
         "coverage": "deno task test --clean --reporter=dot --coverage=coverage && deno coverage --lcov --output=coverage.lcov --exclude='src/test-utils.ts|vendor' coverage && genhtml -o coverage/report coverage.lcov",
