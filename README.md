@@ -1,5 +1,7 @@
 # Generic Pool
 
+[![JSR](https://jsr.io/badges/@esroyo/generic-pool)](https://jsr.io/@esroyo/generic-pool) [![JSR Score](https://jsr.io/badges/@esroyo/generic-pool/score)](https://jsr.io/@esroyo/generic-pool) [![codecov](https://codecov.io/gh/esroyo/generic-pool/graph/badge.svg?token=CX297QN9C8)](https://codecov.io/gh/esroyo/generic-pool)
+
 ## About
 
 Generic resource pool with Promise based API. Can be used to reuse or throttle usage of expensive resources such as database connections.

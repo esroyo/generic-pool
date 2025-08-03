@@ -24,7 +24,7 @@ jobs:
       - name: Lint Deno Module
         run: deno fmt --check src
       - name: Build Deno Module
-        run: deno run --reload mod.ts
+        run: deno run --reload src/generic-pool.ts
       - name: Test Deno Module
         run: deno task coverage
       - name: Upload coverage reports to Codecov

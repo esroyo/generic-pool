@@ -844,11 +844,20 @@ export class Pool<T> extends EventEmitter {
     }
 
     protected _applyDestroyTimeout(promise: Promise<void>): Promise<void> {
+        let timeout: ReturnType<typeof setTimeout> | undefined;
         const timeoutPromise = new this._Promise<void>((_resolve, reject) => {
-            setTimeout(() => {
+            timeout = setTimeout(() => {
                 reject(new Error('destroy timed out'));
+                timeout = undefined;
             }, this._config.destroyTimeoutMillis!);
         });
+        const finalizeTimeout = () => {
+            if (timeout) {
+                clearTimeout(timeout);
+                timeout = undefined;
+            }
+        };
+        promise.then(finalizeTimeout, finalizeTimeout);
         return this._Promise.race([timeoutPromise, promise]);
     }
 
