@@ -99,27 +99,83 @@ function validateFactory<T>(factory: Factory<T>): void {
 }
 
 // Interfaces
+
+/**
+ * Factory interface for creating, destroying, and optionally validating resources.
+ * @template T The type of resource this factory creates
+ */
 export interface Factory<T> {
+    /**
+     * Creates a new resource. Should return a Promise that resolves to the resource
+     * or rejects with an Error if unable to create.
+     * @returns Promise that resolves to a resource
+     */
     create(): Promise<T>;
+
+    /**
+     * Destroys a resource. Should return a Promise that resolves once the resource
+     * has been destroyed.
+     * @param client The resource to destroy
+     * @returns Promise that resolves when destruction is complete
+     */
     destroy(client: T): Promise<void>;
+
+    /**
+     * Optional validation function for resources. Should return a Promise that resolves
+     * to true if the resource is valid, false otherwise.
+     * @param client The resource to validate
+     * @returns Promise that resolves to validation result
+     */
     validate?(client: T): Promise<boolean>;
 }
 
+/**
+ * Configuration options for the pool.
+ */
 export interface Options {
+    /** Maximum number of resources to create at any given time (default: 1) */
     max?: number;
+
+    /** Minimum number of resources to keep in pool at any given time (default: 0) */
     min?: number;
+
+    /** Maximum number of queued requests allowed */
     maxWaitingClients?: number;
+
+    /** Should the pool validate resources before giving them to clients */
     testOnBorrow?: boolean;
+
+    /** Should the pool validate resources when they are returned */
     testOnReturn?: boolean;
+
+    /** Max milliseconds an acquire call will wait before timing out */
     acquireTimeoutMillis?: number;
+
+    /** Max milliseconds a destroy call will wait before timing out */
     destroyTimeoutMillis?: number;
+
+    /** If true, oldest resources are allocated first (FIFO). If false, most recent (LIFO) (default: true) */
     fifo?: boolean;
+
+    /** Priority range for queuing (default: 1) */
     priorityRange?: number;
+
+    /** Should the pool start creating resources immediately (default: true) */
     autostart?: boolean;
+
+    /** How often to run eviction checks in milliseconds (default: 0 - disabled) */
     evictionRunIntervalMillis?: number;
+
+    /** Number of resources to check each eviction run (default: 3) */
     numTestsPerEvictionRun?: number;
+
+    /** Time an object may sit idle before eligible for eviction with min idle condition (default: -1 - disabled) */
     softIdleTimeoutMillis?: number;
+
+    /** Minimum time an object may sit idle before eligible for eviction (default: 30000) */
     idleTimeoutMillis?: number;
+
+    /** Promise implementation to use (default: global Promise) */
     Promise?: PromiseConstructor;
 }
 
@@ -278,6 +334,9 @@ class ExtendableError extends Error {
     }
 }
 
+/**
+ * Error thrown when a timeout occurs during resource operations.
+ */
 export class TimeoutError extends ExtendableError {
     constructor(message: string) {
         super(message);
@@ -294,6 +353,10 @@ function fbind<T extends any[], R>(
     };
 }
 
+/**
+ * Represents a request for a resource from the pool with optional timeout support.
+ * @template T The type of resource being requested
+ */
 export class ResourceRequest<T> extends Deferred<T> {
     protected _creationTimestamp: number;
     protected _timeout: ReturnType<typeof setTimeout> | null = null;
@@ -417,8 +480,17 @@ class PooledResource<T> {
     }
 }
 
-// Default Evictor
+/**
+ * Default evictor implementation that determines when idle resources should be evicted.
+ */
 export class DefaultEvictor {
+    /**
+     * Determines whether a pooled resource should be evicted based on idle time and pool configuration.
+     * @param config Eviction configuration including timeout values and minimum pool size
+     * @param pooledResource The resource to evaluate for eviction
+     * @param availableObjectsCount Current number of available objects in the pool
+     * @returns true if the resource should be evicted, false otherwise
+     */
     evict<T>(
         config: EvictionConfig,
         pooledResource: PooledResource<T>,
@@ -446,12 +518,19 @@ interface DoublyLinkedListNode<T> {
     data: T;
 }
 
-// Doubly Linked List
+/**
+ * Doubly linked list implementation used internally by the pool for efficient queue operations.
+ * @template T The type of data stored in the list
+ */
 export class DoublyLinkedList<T> {
     head: DoublyLinkedListNode<T> | null = null;
     tail: DoublyLinkedListNode<T> | null = null;
     length: number = 0;
 
+    /**
+     * Inserts a node at the beginning of the list.
+     * @param node The node to insert
+     */
     insertBeginning(node: DoublyLinkedListNode<T>): void {
         if (this.head === null) {
             this.head = node;
@@ -464,6 +543,10 @@ export class DoublyLinkedList<T> {
         }
     }
 
+    /**
+     * Inserts a node at the end of the list.
+     * @param node The node to insert
+     */
     insertEnd(node: DoublyLinkedListNode<T>): void {
         if (this.tail === null) {
             this.insertBeginning(node);
@@ -472,6 +555,11 @@ export class DoublyLinkedList<T> {
         }
     }
 
+    /**
+     * Inserts a new node after an existing node.
+     * @param node The existing node
+     * @param newNode The new node to insert
+     */
     insertAfter(
         node: DoublyLinkedListNode<T>,
         newNode: DoublyLinkedListNode<T>,
@@ -487,6 +575,11 @@ export class DoublyLinkedList<T> {
         this.length++;
     }
 
+    /**
+     * Inserts a new node before an existing node.
+     * @param node The existing node
+     * @param newNode The new node to insert
+     */
     insertBefore(
         node: DoublyLinkedListNode<T>,
         newNode: DoublyLinkedListNode<T>,
@@ -502,6 +595,10 @@ export class DoublyLinkedList<T> {
         this.length++;
     }
 
+    /**
+     * Removes a node from the list.
+     * @param node The node to remove
+     */
     remove(node: DoublyLinkedListNode<T>): void {
         if (node.prev === null) {
             this.head = node.next;
@@ -518,6 +615,11 @@ export class DoublyLinkedList<T> {
         this.length--;
     }
 
+    /**
+     * Creates a new doubly linked list node with the given data.
+     * @param data The data to store in the node
+     * @returns A new doubly linked list node
+     */
     static createNode<T>(data: T): DoublyLinkedListNode<T> {
         return {
             prev: null,
@@ -607,7 +709,10 @@ class DequeIterator<T> extends DoublyLinkedListIterator<T> {
     }
 }
 
-// Deque
+/**
+ * Double-ended queue (deque) implementation used internally by the pool.
+ * @template T The type of elements stored in the deque
+ */
 export class Deque<T> {
     protected _list: DoublyLinkedList<T>;
 
@@ -615,6 +720,10 @@ export class Deque<T> {
         this._list = new DoublyLinkedList<T>();
     }
 
+    /**
+     * Removes and returns the first element from the deque.
+     * @returns The first element, or undefined if the deque is empty
+     */
     shift(): T | undefined {
         if (this.length === 0) {
             return undefined;
@@ -627,16 +736,28 @@ export class Deque<T> {
         return undefined;
     }
 
+    /**
+     * Adds an element to the beginning of the deque.
+     * @param element The element to add
+     */
     unshift(element: T): void {
         const node = DoublyLinkedList.createNode(element);
         this._list.insertBeginning(node);
     }
 
+    /**
+     * Adds an element to the end of the deque.
+     * @param element The element to add
+     */
     push(element: T): void {
         const node = DoublyLinkedList.createNode(element);
         this._list.insertEnd(node);
     }
 
+    /**
+     * Removes and returns the last element from the deque.
+     * @returns The last element, or undefined if the deque is empty
+     */
     pop(): T | undefined {
         if (this.length === 0) {
             return undefined;
@@ -653,14 +774,26 @@ export class Deque<T> {
         return new DequeIterator(this._list);
     }
 
+    /**
+     * Returns an iterator that traverses the deque from head to tail.
+     * @returns Iterator for the deque
+     */
     iterator(): DequeIterator<T> {
         return new DequeIterator(this._list);
     }
 
+    /**
+     * Returns an iterator that traverses the deque from tail to head.
+     * @returns Reverse iterator for the deque
+     */
     reverseIterator(): DequeIterator<T> {
         return new DequeIterator(this._list, true);
     }
 
+    /**
+     * Gets the first element without removing it.
+     * @returns The first element, or undefined if the deque is empty
+     */
     get head(): T | undefined {
         if (this.length === 0) {
             return undefined;
@@ -669,6 +802,10 @@ export class Deque<T> {
         return node ? node.data : undefined;
     }
 
+    /**
+     * Gets the last element without removing it.
+     * @returns The last element, or undefined if the deque is empty
+     */
     get tail(): T | undefined {
         if (this.length === 0) {
             return undefined;
@@ -677,6 +814,10 @@ export class Deque<T> {
         return node ? node.data : undefined;
     }
 
+    /**
+     * Gets the number of elements in the deque.
+     * @returns The length of the deque
+     */
     get length(): number {
         return this._list.length;
     }
@@ -703,7 +844,10 @@ class Queue<T> extends Deque<any> {
     }
 }
 
-// Priority Queue
+/**
+ * Priority queue implementation that manages multiple queues with different priority levels.
+ * @template T The type of elements stored in the priority queue
+ */
 export class PriorityQueue<T extends ResourceRequest<any>> {
     protected _size: number;
     protected _slots: Queue<T>[];
@@ -716,6 +860,10 @@ export class PriorityQueue<T extends ResourceRequest<any>> {
         }
     }
 
+    /**
+     * Gets the total number of elements across all priority levels.
+     * @returns The total length
+     */
     get length(): number {
         let _length = 0;
         for (let i = 0, slots = this._slots.length; i < slots; i++) {
@@ -724,6 +872,11 @@ export class PriorityQueue<T extends ResourceRequest<any>> {
         return _length;
     }
 
+    /**
+     * Adds an element to the queue with the specified priority.
+     * @param obj The element to add
+     * @param priority The priority level (0 = highest priority)
+     */
     enqueue(obj: T, priority?: number): void {
         priority = priority && +priority | 0 || 0;
         if (priority) {
@@ -734,6 +887,10 @@ export class PriorityQueue<T extends ResourceRequest<any>> {
         this._slots[priority].push(obj);
     }
 
+    /**
+     * Removes and returns the highest priority element from the queue.
+     * @returns The highest priority element, or undefined if the queue is empty
+     */
     dequeue(): T | undefined {
         for (let i = 0, sl = this._slots.length; i < sl; i += 1) {
             if (this._slots[i].length) {
@@ -743,6 +900,10 @@ export class PriorityQueue<T extends ResourceRequest<any>> {
         return undefined;
     }
 
+    /**
+     * Gets the highest priority element without removing it.
+     * @returns The highest priority element, or undefined if the queue is empty
+     */
     get head(): T | undefined {
         for (let i = 0, sl = this._slots.length; i < sl; i += 1) {
             if (this._slots[i].length > 0) {
@@ -752,6 +913,10 @@ export class PriorityQueue<T extends ResourceRequest<any>> {
         return undefined;
     }
 
+    /**
+     * Gets the lowest priority element without removing it.
+     * @returns The lowest priority element, or undefined if the queue is empty
+     */
     get tail(): T | undefined {
         for (let i = this._slots.length - 1; i >= 0; i--) {
             if (this._slots[i].length > 0) {
@@ -769,9 +934,15 @@ function reflector<T>(promise: Promise<T>): Promise<void> {
     return promise.then(noop, noop);
 }
 
-// Main Pool Class
+/**
+ * Generic resource pool with Promise-based API. Can be used to reuse or throttle
+ * usage of expensive resources such as database connections.
+ * @template T The type of resource managed by this pool
+ */
 export class Pool<T> extends EventEmitter {
+    /** Event emitted when factory.create() rejects */
     static readonly FACTORY_CREATE_ERROR = 'factoryCreateError';
+    /** Event emitted when factory.destroy() rejects */
     static readonly FACTORY_DESTROY_ERROR = 'factoryDestroyError';
 
     protected _config: PoolOptions;
@@ -1070,6 +1241,10 @@ export class Pool<T> extends EventEmitter {
         this._scheduledEviction = null;
     }
 
+    /**
+     * Starts the pool. If autostart is false, this must be called before acquiring resources.
+     * Begins creating minimum resources and starts the evictor if configured.
+     */
     start(): void {
         if (this._draining === true || this._started === true) {
             return;
@@ -1079,6 +1254,23 @@ export class Pool<T> extends EventEmitter {
         this._ensureMinimum();
     }
 
+    /**
+     * Acquires a resource from the pool. If no resources are available, the call will wait
+     * until a resource becomes available or times out.
+     * @param priority Optional priority for queuing (0 = highest priority)
+     * @returns Promise that resolves to a resource from the pool
+     * @example
+     * ```typescript
+     * const resource = await pool.acquire();
+     * try {
+     *   // Use the resource
+     *   await resource.doSomething();
+     * } finally {
+     *   // Always release the resource back to the pool
+     *   await pool.release(resource);
+     * }
+     * ```
+     */
     acquire(priority?: number): Promise<T> {
         if (this._started === false && this._config.autostart === false) {
             this.start();
@@ -1108,6 +1300,19 @@ export class Pool<T> extends EventEmitter {
         return resourceRequest.promise;
     }
 
+    /**
+     * Convenience method that handles acquiring a resource, passing it to a function,
+     * and automatically releasing or destroying it based on the function's outcome.
+     * @param fn Function to execute with the acquired resource
+     * @param priority Optional priority for queuing (0 = highest priority)
+     * @returns Promise that resolves to the return value of the function
+     * @example
+     * ```typescript
+     * const result = await pool.use(async (dbClient) => {
+     *   return await dbClient.query('SELECT * FROM users');
+     * });
+     * ```
+     */
     use<U>(fn: (resource: T) => U | Promise<U>, priority?: number): Promise<U> {
         return this.acquire(priority).then((resource) => {
             return Promise.resolve(fn(resource)).then(
@@ -1123,10 +1328,30 @@ export class Pool<T> extends EventEmitter {
         });
     }
 
+    /**
+     * Checks if a resource is currently borrowed from this pool.
+     * @param resource The resource to check
+     * @returns true if the resource is currently borrowed, false otherwise
+     */
     isBorrowedResource(resource: T): boolean {
         return this._resourceLoans.has(resource);
     }
 
+    /**
+     * Returns a resource to the pool, making it available for other clients.
+     * The resource should have been previously acquired from this pool.
+     * @param resource The resource to return to the pool
+     * @returns Promise that resolves when the resource has been returned
+     * @example
+     * ```typescript
+     * const resource = await pool.acquire();
+     * try {
+     *   // Use the resource
+     * } finally {
+     *   await pool.release(resource);
+     * }
+     * ```
+     */
     release(resource: T): Promise<void> {
         const loan = this._resourceLoans.get(resource);
         if (loan === undefined) {
@@ -1143,6 +1368,26 @@ export class Pool<T> extends EventEmitter {
         return this._Promise.resolve();
     }
 
+    /**
+     * Destroys a resource instead of returning it to the pool. Use this when
+     * you know the resource is no longer usable (e.g., connection timed out).
+     * @param resource The resource to destroy
+     * @returns Promise that resolves when the resource has been destroyed
+     * @example
+     * ```typescript
+     * const resource = await pool.acquire();
+     * try {
+     *   // Use the resource
+     * } catch (error) {
+     *   // Resource is corrupted, destroy it
+     *   await pool.destroy(resource);
+     *   throw error;
+     * } finally {
+     *   // Normal case would release
+     *   await pool.release(resource);
+     * }
+     * ```
+     */
     destroy(resource: T): Promise<void> {
         const loan = this._resourceLoans.get(resource);
         if (loan === undefined) {
@@ -1170,6 +1415,17 @@ export class Pool<T> extends EventEmitter {
         }
     }
 
+    /**
+     * Drains the pool by preventing new acquisitions and waiting for all borrowed
+     * resources to be returned. This is typically called during application shutdown.
+     * @returns Promise that resolves when all resources have been returned
+     * @example
+     * ```typescript
+     * // During application shutdown
+     * await pool.drain();
+     * await pool.clear();
+     * ```
+     */
     drain(): Promise<void> {
         this._draining = true;
         return this.__allResourceRequestsSettled().then(() => {
@@ -1196,6 +1452,17 @@ export class Pool<T> extends EventEmitter {
         return this._Promise.all(ps);
     }
 
+    /**
+     * Clears the pool by destroying all available resources. Should typically be
+     * called after drain() during application shutdown.
+     * @returns Promise that resolves when all resources have been destroyed
+     * @example
+     * ```typescript
+     * // During application shutdown
+     * await pool.drain();
+     * await pool.clear();
+     * ```
+     */
     clear(): Promise<void> {
         const reflectedCreatePromises = Array.from(
             this._factoryCreateOperations,
@@ -1211,6 +1478,15 @@ export class Pool<T> extends EventEmitter {
         });
     }
 
+    /**
+     * Waits for the pool to be ready (i.e., has at least the minimum number of resources available).
+     * @returns Promise that resolves when the pool is ready
+     * @example
+     * ```typescript
+     * const pool = createPool(factory, { min: 5, max: 10 });
+     * await pool.ready(); // Waits until at least 5 resources are available
+     * ```
+     */
     ready(): Promise<void> {
         return new this._Promise<void>((resolve) => {
             const isReady = () => {
@@ -1224,32 +1500,59 @@ export class Pool<T> extends EventEmitter {
         });
     }
 
-    // Getters matching the interface
+    /**
+     * Gets the number of additional resources that can be created (max - current size).
+     * @returns Number of resources that can still be created
+     */
     get spareResourceCapacity(): number {
         return this._config.max -
             (this._allObjects.size + this._factoryCreateOperations.size);
     }
 
+    /**
+     * Gets the total number of resources in the pool (both available and borrowed).
+     * @returns Total number of resources
+     */
     get size(): number {
         return this._count;
     }
 
+    /**
+     * Gets the number of resources currently available for borrowing.
+     * @returns Number of available resources
+     */
     get available(): number {
         return this._availableObjects.length;
     }
 
+    /**
+     * Gets the number of resources currently borrowed by clients.
+     * @returns Number of borrowed resources
+     */
     get borrowed(): number {
         return this._resourceLoans.size;
     }
 
+    /**
+     * Gets the number of clients waiting to acquire a resource.
+     * @returns Number of pending acquisition requests
+     */
     get pending(): number {
         return this._waitingClientsQueue.length;
     }
 
+    /**
+     * Gets the maximum number of resources allowed in the pool.
+     * @returns Maximum pool size
+     */
     get max(): number {
         return this._config.max;
     }
 
+    /**
+     * Gets the minimum number of resources maintained in the pool.
+     * @returns Minimum pool size
+     */
     get min(): number {
         return this._config.min;
     }
@@ -1267,7 +1570,27 @@ export class Pool<T> extends EventEmitter {
     }
 }
 
-// Factory function
+/**
+ * Creates a new resource pool with the given factory and options.
+ * @template T The type of resource this pool will manage
+ * @param factory Factory object with create, destroy, and optionally validate methods
+ * @param config Optional configuration for the pool
+ * @returns A new Pool instance
+ * @example
+ * ```typescript
+ * const factory = {
+ *   create: () => Promise.resolve(new DatabaseConnection()),
+ *   destroy: (conn) => conn.close(),
+ *   validate: (conn) => Promise.resolve(conn.isConnected())
+ * };
+ *
+ * const pool = createPool(factory, {
+ *   max: 10,
+ *   min: 2,
+ *   acquireTimeoutMillis: 30000
+ * });
+ * ```
+ */
 export function createPool<T>(factory: Factory<T>, config?: Options): Pool<T> {
     return new Pool(DefaultEvictor, Deque, PriorityQueue, factory, config);
 }
