@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [3.10.2](https://github.com/esroyo/generic-pool/compare/v3.10.1...v3.10.2) (2025-08-03)
+
+
+### Other
+
+* add minimal jsdoc ([a7d559d](https://github.com/esroyo/generic-pool/commit/a7d559d4fbb8ff5de110499dca73ac6fba41c2e8))
+
 ## [3.10.1](https://github.com/esroyo/generic-pool/compare/v3.10.0...v3.10.1) (2025-08-03)
 
 
