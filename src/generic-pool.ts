@@ -138,16 +138,24 @@ export interface Options {
     /** Maximum number of resources to create at any given time (default: 1) */
     max?: number;
 
-    /** Minimum number of resources to keep in pool at any given time (default: 0) */
+    /**
+     * Minimum number of resources to keep in pool at any given time (default: 0)
+     * Note `idleTimeoutMillis` option takes precedence over this, idle resources
+     * will be evicted disregarding the minimum set.
+     */
     min?: number;
 
     /** Maximum number of queued requests allowed */
     maxWaitingClients?: number;
 
-    /** Should the pool validate resources before giving them to clients */
+    /** Should the pool validate resources before giving them to clients
+     * (calls your factory's validate method if provided) */
     testOnBorrow?: boolean;
 
-    /** Should the pool validate resources when they are returned */
+    /**
+     * Should the pool validate resources when they are returned
+     * (calls your factory's validate method if provided)
+     */
     testOnReturn?: boolean;
 
     /** Max milliseconds an acquire call will wait before timing out */
@@ -159,22 +167,35 @@ export interface Options {
     /** If true, oldest resources are allocated first (FIFO). If false, most recent (LIFO) (default: true) */
     fifo?: boolean;
 
-    /** Priority range for queuing (default: 1) */
+    /**
+     * Priority range for queuing requests (default: 1)
+     * Creates priority levels 0 to (priorityRange-1), where 0 is highest priority.
+     * acquire() calls without priority use the lowest priority level.
+     */
     priorityRange?: number;
 
     /** Should the pool start creating resources immediately (default: true) */
     autostart?: boolean;
 
-    /** How often to run eviction checks in milliseconds (default: 0 - disabled) */
+    /**
+     * How often to run eviction checks in milliseconds (default: 0 - disabled)
+     * Must be set for idle timeout options to work.
+     */
     evictionRunIntervalMillis?: number;
 
     /** Number of resources to check each eviction run (default: 3) */
     numTestsPerEvictionRun?: number;
 
-    /** Time an object may sit idle before eligible for eviction with min idle condition (default: -1 - disabled) */
+    /**
+     * Time an object may sit idle before eligible for eviction (default: -1 - disabled)
+     * Respects the `min` pool size - won't evict below minimum.
+     */
     softIdleTimeoutMillis?: number;
 
-    /** Minimum time an object may sit idle before eligible for eviction (default: 30000) */
+    /**
+     * Minimum time an object may sit idle before eligible for eviction (default: 30000)
+     * This is the _hard_ idle timeout, will evict idle resources below `min`.
+     */
     idleTimeoutMillis?: number;
 
     /** Promise implementation to use (default: global Promise) */
