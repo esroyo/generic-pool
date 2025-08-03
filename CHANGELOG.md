@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [3.10.3](https://github.com/esroyo/generic-pool/compare/v3.10.2...v3.10.3) (2025-08-03)
+
+
+### Bug Fixes
+
+* add missing explicit types ([70df49f](https://github.com/esroyo/generic-pool/commit/70df49f1d69f0d3b2360875a8a5e934a04a1f764))
+
 ## [3.10.2](https://github.com/esroyo/generic-pool/compare/v3.10.1...v3.10.2) (2025-08-03)
 
 
