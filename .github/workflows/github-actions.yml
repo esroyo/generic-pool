@@ -16,7 +16,7 @@ jobs:
       - name: Install lcov
         run: sudo apt-get install -y lcov
       - name: Git Checkout Deno Module
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Use Deno Version ${{ matrix.deno-version }}
         uses: denolib/setup-deno@v2
         with:
@@ -28,7 +28,7 @@ jobs:
       - name: Test Deno Module
         run: deno task coverage
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 

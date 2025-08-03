@@ -7,12 +7,14 @@ type ListenerMetadata = {
 };
 
 class EventEmitter extends EventTarget {
-    protected _listenerMetadata = new WeakMap<Listener, ListenerMetadata>();
-    protected _finalizationRegistry = new FinalizationRegistry(
-        (cleanup: () => void) => {
-            cleanup();
-        },
-    );
+    protected _listenerMetadata: WeakMap<Listener, ListenerMetadata> =
+        new WeakMap<Listener, ListenerMetadata>();
+    protected _finalizationRegistry: FinalizationRegistry<() => void> =
+        new FinalizationRegistry(
+            (cleanup: () => void) => {
+                cleanup();
+            },
+        );
 
     emit(type: string, ...args: any[]): boolean {
         const event = new CustomEvent(type, { detail: args });
@@ -835,7 +837,7 @@ class Queue<T> extends Deque<any> {
 
     protected _createTimeoutRejectionHandler(
         node: DoublyLinkedListNode<ResourceRequest<T>>,
-    ) {
+    ): (reason: any) => void {
         return (reason: any) => {
             if (reason.name === 'TimeoutError') {
                 this._list.remove(node);
