@@ -1,0 +1,9 @@
+codecov:
+  allow_coverage_offsets: true
+coverage:
+  status:
+    # Disable patch since it is noisy and not correct
+    patch:
+      default:
+        enabled: no
+        if_not_found: success
