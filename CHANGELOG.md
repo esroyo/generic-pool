@@ -1,3 +1,14 @@
+### [3.10.4](https://github.com/esroyo/generic-pool/compare/v3.10.3...v3.10.4) (2025.08.20)
+
+- chore: nudge codecov
+  ([b662504](https://github.com/esroyo/generic-pool/commit/b662504b7923954053a543f165c6eceb73536631))
+- chore: improved pool options doc
+  ([df0d775](https://github.com/esroyo/generic-pool/commit/df0d775bf010654af966141b1a85bd796e7d1ef4))
+- chore: dummy changes to reset codecov
+  ([169ea50](https://github.com/esroyo/generic-pool/commit/169ea50fb47b88121709a89fdc5b7efc8d269d7b))
+- chore: add codecov yml
+  ([1f39576](https://github.com/esroyo/generic-pool/commit/1f395761b828458cc63442683c4a2bb3e64b2704))
+
 ### [3.10.3](https://github.com/esroyo/generic-pool/compare/v3.10.2...v3.10.3) (2025.08.03)
 
 - fix: add missing explicit types

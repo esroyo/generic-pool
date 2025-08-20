@@ -1,6 +1,6 @@
 {
     "name": "@esroyo/generic-pool",
-    "version": "3.10.3",
+    "version": "3.10.4",
     "exports": "./src/generic-pool.ts",
     "tasks": {
         "bump": "git tag bump && git push origin bump && git tag -d bump",
