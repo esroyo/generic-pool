@@ -1,9 +1,10 @@
-name: Test
+name: ci
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -30,12 +31,6 @@ jobs:
       - name: Test Deno Module
         run: deno task coverage
       - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          override_commit: ${{ github.sha }}
-          override_branch: ${{ github.ref_name }}
-          fail_ci_if_error: true
-          verbose: true
+              uses: codecov/codecov-action@v3
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-

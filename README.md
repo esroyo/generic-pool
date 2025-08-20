@@ -2,6 +2,7 @@
 
 [![JSR](https://jsr.io/badges/@esroyo/generic-pool)](https://jsr.io/@esroyo/generic-pool)
 [![JSR Score](https://jsr.io/badges/@esroyo/generic-pool/score)](https://jsr.io/@esroyo/generic-pool)
+[![ci](https://github.com/esroyo/generic-pool/actions/workflows/ci.yml/badge.svg)](https://github.com/esroyo/generic-pool/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/esroyo/generic-pool/graph/badge.svg?token=Q9O4GVZAB7)](https://codecov.io/gh/esroyo/generic-pool)
 
 ## About
