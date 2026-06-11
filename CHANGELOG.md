@@ -1,3 +1,8 @@
+### [3.11.0](https://github.com/esroyo/generic-pool/compare/v3.10.4...v3.11.0) (2026.06.11)
+
+- feat: support { signal } option in pool.acquire()
+  ([a184c75](https://github.com/esroyo/generic-pool/commit/a184c75d3d1531d35f21567c15442bbd03623aef))
+
 ### [3.10.4](https://github.com/esroyo/generic-pool/compare/v3.10.3...v3.10.4) (2025.08.20)
 
 - chore: nudge codecov
