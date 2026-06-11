@@ -746,6 +746,117 @@ Deno.test('acquireTimeout handles non timed out acquire calls', async () => {
     await pool.clear();
 });
 
+// ===== AbortSignal Tests =====
+
+Deno.test('acquire with already-aborted signal rejects immediately', async () => {
+    const factory = {
+        create: () => Promise.resolve({}),
+        destroy: () => Promise.resolve(),
+    };
+    const pool = createPool(factory, { max: 1 });
+
+    const controller = new AbortController();
+    controller.abort(new DOMException('test abort', 'AbortError'));
+
+    await assertRejects(
+        () => pool.acquire({ signal: controller.signal }),
+        DOMException,
+        'test abort',
+    );
+    assertEquals(
+        pool.pending,
+        0,
+        'should have no pending requests after immediate abort',
+    );
+
+    await stopPool(pool);
+});
+
+Deno.test('acquire with signal aborted while waiting rejects the pending request', async () => {
+    const factory = {
+        create: () => Promise.resolve({}),
+        destroy: () => Promise.resolve(),
+    };
+    const pool = createPool(factory, { max: 1 });
+
+    // Exhaust the pool so the next acquire must wait
+    const borrowed = await pool.acquire();
+    assertEquals(pool.pending, 0);
+
+    const controller = new AbortController();
+
+    // Acquire while the pool is exhausted — request is now queued
+    const waitingAcquire = pool.acquire({ signal: controller.signal });
+    assertEquals(
+        pool.pending,
+        1,
+        'should have 1 pending request while waiting',
+    );
+
+    // Abort synchronously — safe because .then(f,f) is already attached inside acquire()
+    controller.abort();
+
+    const err = await assertRejects(
+        () => waitingAcquire,
+        DOMException,
+    );
+    assertEquals(
+        (err as DOMException).name,
+        'AbortError',
+        'should reject with AbortError',
+    );
+    assertEquals(
+        pool.pending,
+        0,
+        'should have no pending requests after abort evicts from queue',
+    );
+
+    await pool.release(borrowed);
+    await stopPool(pool);
+});
+
+Deno.test('acquire with signal does not interfere when signal is aborted after resource is already borrowed', async () => {
+    const factory = {
+        create: () => Promise.resolve({}),
+        destroy: () => Promise.resolve(),
+    };
+    const pool = createPool(factory, { max: 1 });
+
+    // Exhaust the pool
+    const firstResource = await pool.acquire();
+
+    const controller = new AbortController();
+    const waitingAcquire = pool.acquire({ signal: controller.signal });
+    assertEquals(
+        pool.pending,
+        1,
+        'should have 1 pending request while waiting',
+    );
+
+    // Release the first resource — the waiting acquire is now dispatched and resolved
+    await pool.release(firstResource);
+    const secondResource = await waitingAcquire;
+    assertEquals(
+        pool.pending,
+        0,
+        'should have no pending requests after dispatch',
+    );
+    assertEquals(pool.borrowed, 1, 'resource should be borrowed');
+
+    // Abort the signal after the acquire has already resolved — must be a no-op
+    controller.abort(new DOMException('too late', 'AbortError'));
+
+    // Resource is still usable: release it normally and drain
+    await pool.release(secondResource);
+    assertEquals(
+        pool.borrowed,
+        0,
+        'resource should be returned normally after post-resolve abort',
+    );
+
+    await stopPool(pool);
+});
+
 // ===== GitHub Issue #159 Test =====
 
 class ResourceFactoryDelayCreateEachSecond {

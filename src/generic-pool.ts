@@ -860,7 +860,9 @@ class Queue<T> extends Deque<any> {
         node: DoublyLinkedListNode<ResourceRequest<T>>,
     ): (reason: any) => void {
         return (reason: any) => {
-            if (reason.name === 'TimeoutError') {
+            if (
+                reason?.name === 'TimeoutError' || reason?.name === 'AbortError'
+            ) {
                 this._list.remove(node);
             }
         };
@@ -1280,7 +1282,11 @@ export class Pool<T> extends EventEmitter {
     /**
      * Acquires a resource from the pool. If no resources are available, the call will wait
      * until a resource becomes available or times out.
-     * @param priority Optional priority for queuing (0 = highest priority)
+     * @param priorityOrOptions Optional priority number (0 = highest priority), or an options
+     *   object with `priority` and/or `signal`. When `signal` is provided and already aborted,
+     *   the returned promise rejects immediately with the signal's reason. If the signal fires
+     *   while the request is still queued, the pending request is rejected and removed from the
+     *   waiting queue.
      * @returns Promise that resolves to a resource from the pool
      * @example
      * ```typescript
@@ -1293,8 +1299,25 @@ export class Pool<T> extends EventEmitter {
      *   await pool.release(resource);
      * }
      * ```
+     * @example
+     * ```typescript
+     * // Abort the acquire if the caller gives up
+     * const resource = await pool.acquire({ signal: request.signal });
+     * ```
      */
-    acquire(priority?: number): Promise<T> {
+    acquire(
+        priorityOrOptions?: number | {
+            priority?: number;
+            signal?: AbortSignal;
+        },
+    ): Promise<T> {
+        const priority = typeof priorityOrOptions === 'number'
+            ? priorityOrOptions
+            : priorityOrOptions?.priority;
+        const signal = typeof priorityOrOptions === 'object'
+            ? priorityOrOptions?.signal
+            : undefined;
+
         if (this._started === false && this._config.autostart === false) {
             this.start();
         }
@@ -1314,10 +1337,27 @@ export class Pool<T> extends EventEmitter {
             );
         }
 
+        if (signal?.aborted) {
+            return this._Promise.reject(signal.reason);
+        }
+
         const resourceRequest = new ResourceRequest<T>(
             this._config.acquireTimeoutMillis,
             this._Promise,
         );
+
+        if (signal) {
+            const onAbort = () => resourceRequest.reject(signal.reason);
+            signal.addEventListener('abort', onAbort, { once: true });
+            // Attach a handler immediately so that runtimes with strict
+            // unhandled-rejection tracking (e.g. Deno's AbortSignal.[signalAbort])
+            // see the promise as handled before the abort event can fire.
+            // Using .then(f, f) is a single allocation that covers both settlement
+            // paths and removes the abort listener in either case.
+            const teardown = () => signal.removeEventListener('abort', onAbort);
+            resourceRequest.promise.then(teardown, teardown);
+        }
+
         this._waitingClientsQueue.enqueue(resourceRequest, priority);
         this._dispense();
         return resourceRequest.promise;

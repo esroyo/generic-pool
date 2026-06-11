@@ -222,21 +222,46 @@ const onfulfilled = function (resource) {
 };
 
 pool.acquire().then(onfulfilled);
-//or
+// or with a numeric priority
 const priority = 2;
 pool.acquire(priority).then(onfulfilled);
+// or with an options object
+pool.acquire({ priority: 2, signal: abortController.signal }).then(onfulfilled);
 ```
 
 This function is for when you want to "borrow" a resource from the pool.
 
-`acquire` takes one optional argument:
+`acquire` takes one optional argument, which can be either:
 
-- `priority`: optional, number, see **Priority Queueing** below.
+- a `number` — shorthand for `{ priority }`, see **Priority Queueing** below.
+- an `object` with any of the following properties:
+  - `priority`: optional, number, see **Priority Queueing** below.
+  - `signal`: optional, `AbortSignal`. When provided, the pending acquire
+    request will be rejected with the signal's reason if the signal is aborted
+    before a resource becomes available. If the signal is already aborted when
+    `acquire` is called the returned promise rejects immediately.
 
-and returns a `Promise` Once a resource in the pool is available, the promise
+and returns a `Promise`. Once a resource in the pool is available, the promise
 will be resolved with a `resource` (whatever `factory.create` makes for you). If
-the Pool is unable to give a resource (e.g timeout) then the promise will be
-rejected with an `Error`
+the pool is unable to give a resource (e.g. timeout or aborted signal) then the
+promise will be rejected with an `Error`.
+
+#### Cancelling an acquire with AbortSignal
+
+```js
+try {
+    // Cancel the acquire if no resource is available within 5 seconds
+    const resource = await pool.acquire({ signal: AbortSignal.timeout(5000) });
+    // use resource ...
+    pool.release(resource);
+} catch (err) {
+    if (err.name === 'TimeoutError') {
+        // acquire timed out — no resource was borrowed
+    } else {
+        throw err;
+    }
+}
+```
 
 ### pool.release
 
